@@ -1,0 +1,374 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Simoun Death Counter</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Cinzel+Decorative:wght@700&family=Cinzel:wght@400;600;800&family=Cormorant+Garamond:ital,wght@0,400;0,600;1,400&family=Pinyon+Script&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --ink: #0b0a0d;
+    --gold: #d8b36a;
+    --gold-hi: #f6e2a8;
+    --gold-lo: #8a6a2e;
+    --blood: #a3241f;
+    --cream: #efe4cc;
+    --paper: #f4ead2;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; height: 100%; }
+  body {
+    background:
+      radial-gradient(ellipse at 50% 30%, #2a1d22 0%, #120d12 45%, var(--ink) 80%),
+      var(--ink);
+    color: var(--cream);
+    font-family: "Cormorant Garamond", Georgia, serif;
+    overflow: hidden;
+    user-select: none;
+  }
+  /* painterly grain */
+  body::before {
+    content: ""; position: fixed; inset: 0; pointer-events: none; opacity: .18; z-index: 1;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='200'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='3'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  }
+  /* the great number on the horizon */
+  .monolith {
+    position: fixed; left: 50%; bottom: -4vh; transform: translateX(-50%);
+    font-family: "Cinzel Decorative", serif; font-size: 70vh; line-height: 1;
+    color: transparent; -webkit-text-stroke: 1px rgba(216,179,106,.07);
+    pointer-events: none; z-index: 0;
+  }
+
+  /* petals */
+  .petal {
+    position: fixed; top: -5vh; width: 14px; height: 10px; z-index: 2; pointer-events: none;
+    border-radius: 80% 0 80% 0; opacity: .75;
+    animation: fall linear infinite;
+  }
+  @keyframes fall {
+    0%   { transform: translate(0, 0) rotate(0deg); }
+    100% { transform: translate(var(--drift), 110vh) rotate(720deg); }
+  }
+
+  main {
+    position: relative; z-index: 3; height: 100%;
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    gap: 1.2rem; padding: 16px; text-align: center;
+  }
+  .eyebrow {
+    font-family: Cinzel, serif; letter-spacing: .5em; font-size: .85rem; color: var(--gold);
+    text-transform: uppercase; opacity: .85;
+  }
+  .boss {
+    font-family: "Cinzel Decorative", serif; font-size: clamp(2.4rem, 7vw, 5rem); margin: 0;
+    background: linear-gradient(180deg, var(--gold-hi), var(--gold) 55%, var(--gold-lo));
+    -webkit-background-clip: text; background-clip: text; color: transparent;
+    filter: drop-shadow(0 0 18px rgba(216,179,106,.25));
+    outline: none; cursor: text;
+  }
+  .rule {
+    width: min(520px, 80vw); height: 14px; position: relative;
+    background: linear-gradient(90deg, transparent, var(--gold) 20%, var(--gold) 80%, transparent) center/100% 1px no-repeat;
+  }
+  .rule::after {
+    content: "✦"; position: absolute; left: 50%; top: 50%; transform: translate(-50%, -52%);
+    color: var(--gold); background: #150f14; padding: 0 .6em; font-size: .9rem;
+  }
+
+  .count-wrap { position: relative; }
+  .count {
+    font-family: Cinzel, serif; font-weight: 800; font-size: clamp(7rem, 26vh, 16rem); line-height: 1;
+    color: var(--cream); text-shadow: 0 0 40px rgba(163,36,31,.55), 0 4px 0 #000;
+    font-variant-numeric: tabular-nums;
+  }
+  .roman { font-family: Cinzel, serif; color: var(--gold); letter-spacing: .3em; min-height: 1.4em; font-size: 1.1rem; }
+  .count.hit { animation: hit .55s ease-out; }
+  @keyframes hit {
+    0%   { transform: scale(1.35); color: #fff; text-shadow: 0 0 80px var(--blood), 0 0 20px #fff; }
+    30%  { transform: scale(.95) translateX(-6px); }
+    50%  { transform: translateX(5px); }
+    100% { transform: none; }
+  }
+  .flash {
+    position: fixed; inset: 0; z-index: 4; pointer-events: none; opacity: 0;
+    background: radial-gradient(circle at center, transparent 30%, rgba(163,36,31,.55));
+  }
+  .flash.on { animation: flash .6s ease-out; }
+  @keyframes flash { 0% { opacity: 1; } 100% { opacity: 0; } }
+
+  .quip { font-style: italic; font-size: 1.35rem; color: #cbb8a0; min-height: 1.6em; transition: opacity .4s; }
+
+  .stats-row { display: flex; gap: 2.5rem; flex-wrap: wrap; justify-content: center; font-family: Cinzel, serif; }
+  .stat small { display: block; font-size: .7rem; letter-spacing: .3em; color: var(--gold); opacity: .8; }
+  .stat b { font-size: 1.5rem; font-weight: 600; font-variant-numeric: tabular-nums; }
+
+  .controls { display: flex; gap: .8rem; flex-wrap: wrap; justify-content: center; }
+  button {
+    font-family: Cinzel, serif; font-size: 1rem; letter-spacing: .15em; cursor: pointer;
+    color: var(--gold-hi); background: linear-gradient(180deg, #2a1f1a, #120c0c);
+    border: 1px solid var(--gold-lo); padding: .7em 1.4em; position: relative;
+    clip-path: polygon(10px 0, calc(100% - 10px) 0, 100% 50%, calc(100% - 10px) 100%, 10px 100%, 0 50%);
+    transition: background .2s, color .2s, transform .1s;
+  }
+  button:hover { background: linear-gradient(180deg, #4a3320, #1c120c); color: #fff; }
+  button:active { transform: translateY(1px); }
+  button:focus-visible { outline: 2px solid var(--gold-hi); outline-offset: 3px; }
+  button.big {
+    font-size: 1.5rem; padding: .8em 2.4em; color: #fff;
+    background: linear-gradient(180deg, #7d1b17, #3d0b0a); border-color: #c8584f;
+  }
+  button.big:hover { background: linear-gradient(180deg, #a3241f, #4f0f0d); }
+  button.win { border-color: var(--gold); background: linear-gradient(180deg, #5b4519, #241a08); }
+  .hint { font-size: .9rem; opacity: .5; }
+  .hint kbd { font-family: Cinzel, serif; border: 1px solid #554; padding: 0 .4em; border-radius: 3px; }
+
+  /* ---------- certificate ---------- */
+  .overlay {
+    position: fixed; inset: 0; z-index: 10; display: none; align-items: center; justify-content: center;
+    background: rgba(5,4,6,.88); padding: 16px; overflow: auto;
+  }
+  .overlay.open { display: flex; animation: fadein .8s ease; }
+  @keyframes fadein { from { opacity: 0; } }
+  .cert-shell { display: flex; flex-direction: column; align-items: center; gap: 1rem; max-height: 100%; }
+  .cert {
+    width: min(1000px, 94vw); aspect-ratio: 1.414; position: relative; color: #2b1d12;
+    background:
+      radial-gradient(ellipse at center, #fbf4e2 40%, #ecdcb5 85%, #d9c294 100%);
+    padding: 3.2% 5%; text-align: center; font-size: clamp(9px, 1.45vw, 15px);
+    box-shadow: 0 30px 80px rgba(0,0,0,.7);
+    display: flex; flex-direction: column; justify-content: space-between;
+  }
+  .cert::before, .cert::after { content: ""; position: absolute; pointer-events: none; }
+  .cert::before { inset: 2.2%; border: 3px double #8a6a2e; }
+  .cert::after  { inset: 3.4%; border: 1px solid #b8955a; }
+  .corner { position: absolute; font-size: 2.6em; color: #8a6a2e; line-height: 1; }
+  .corner.tl { top: 3.8%; left: 4.2%; } .corner.tr { top: 3.8%; right: 4.2%; transform: scaleX(-1); }
+  .corner.bl { bottom: 3.8%; left: 4.2%; transform: scaleY(-1); } .corner.br { bottom: 3.8%; right: 4.2%; transform: scale(-1); }
+  .cert h2 {
+    font-family: "Cinzel Decorative", serif; font-size: 3.4em; margin: .2em 0 0; letter-spacing: .04em;
+    background: linear-gradient(180deg, #b48a3a, #6e4e1a); -webkit-background-clip: text; background-clip: text; color: transparent;
+  }
+  .cert .sub { font-family: Cinzel, serif; letter-spacing: .45em; font-size: .95em; color: #7a5a28; }
+  .cert .lead { font-size: 1.35em; margin: 0; }
+  .cert .name {
+    font-family: "Pinyon Script", cursive; font-weight: 400; font-size: 4.4em; line-height: 1.1; color: #6b1612;
+    border-bottom: 1px solid #8a6a2e; display: inline-block; padding: 0 1em 0; margin: 0;
+    outline: none; min-width: 40%;
+  }
+  .cert .body { font-size: 1.3em; line-height: 1.45; margin: 0 6%; }
+  .cert .body b { font-family: Cinzel, serif; color: #6b1612; }
+  .could { font-family: Cinzel, serif; letter-spacing: .3em; font-size: .9em; color: #7a5a28; margin: 0; }
+  .grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: .5em 1.5em; margin: 0 7%; }
+  .grid div { border-top: 1px solid rgba(138,106,46,.45); padding-top: .25em; }
+  .grid b { font-family: Cinzel, serif; font-size: 1.7em; color: #3a2614; display: block; font-variant-numeric: tabular-nums; }
+  .grid span { font-style: italic; font-size: 1.05em; }
+  .sigs { display: flex; justify-content: space-between; align-items: flex-end; margin: 0 8%; }
+  .sig { width: 30%; border-top: 1px solid #5a4020; padding-top: .2em; font-family: Cinzel, serif; font-size: .85em; letter-spacing: .2em; }
+  .seal {
+    width: 6.5em; height: 6.5em; border-radius: 50%; display: grid; place-items: center;
+    background: radial-gradient(circle at 35% 30%, #c8443c, #7d1712 60%, #4f0c09);
+    color: #f6d9a8; font-family: "Cinzel Decorative", serif; font-size: 1.1em; line-height: 1.05;
+    box-shadow: inset 0 0 0 4px rgba(0,0,0,.18), inset 0 0 0 7px rgba(246,217,168,.35), 0 3px 6px rgba(0,0,0,.35);
+    transform: rotate(-12deg);
+  }
+  .cert-actions { display: flex; gap: .8rem; }
+
+  @media print {
+    @page { size: A4 landscape; margin: 0; }
+    body { background: none; overflow: visible; }
+    body::before, main, .petal, .monolith, .flash, .cert-actions { display: none !important; }
+    .overlay { position: static; display: flex !important; background: none; padding: 0; }
+    .cert { width: 297mm; height: 210mm; aspect-ratio: auto; box-shadow: none; font-size: 15px;
+            -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  }
+</style>
+</head>
+<body>
+<div class="monolith" id="monolith">0</div>
+<div class="flash" id="flash"></div>
+
+<main>
+  <div class="eyebrow">Expedition Log · Deaths To</div>
+  <h1 class="boss" id="boss" contenteditable spellcheck="false" title="Click to rename">Simoun</h1>
+  <div class="rule"></div>
+
+  <div class="count-wrap">
+    <div class="count" id="count">0</div>
+    <div class="roman" id="roman"></div>
+  </div>
+  <div class="quip" id="quip">The Expedition has not yet fallen.</div>
+
+  <div class="stats-row">
+    <div class="stat"><small>Time Suffering</small><b id="time">0:00:00</b></div>
+    <div class="stat"><small>Deaths / Hour</small><b id="dph">–</b></div>
+    <div class="stat"><small>Since Last Death</small><b id="since">–</b></div>
+  </div>
+
+  <div class="controls">
+    <button class="big" id="add">✝ He Fell</button>
+  </div>
+  <div class="controls">
+    <button id="undo">− Undo</button>
+    <button id="timer">▶ Start Timer</button>
+    <button class="win" id="win">♛ Simoun Defeated</button>
+    <button id="reset">Reset</button>
+  </div>
+  <div class="hint"><kbd>Space</kbd> / <kbd>+</kbd> add death · <kbd>−</kbd> undo · <kbd>T</kbd> timer</div>
+</main>
+
+<div class="overlay" id="overlay">
+  <div class="cert-shell">
+    <div class="cert">
+      <span class="corner tl">❦</span><span class="corner tr">❦</span>
+      <span class="corner bl">❦</span><span class="corner br">❦</span>
+      <div>
+        <div class="sub">Certificate of Triumph</div>
+        <h2>Well Done</h2>
+      </div>
+      <p class="lead">This document solemnly attests that</p>
+      <div><span class="name" id="cname" contenteditable spellcheck="false">Bekhit</span></div>
+      <p class="body">
+        has at long last struck down <b id="cboss">Simoun</b>, after falling
+        <b id="cdeaths">0</b> times across <b id="ctime">0 hours</b> of unrelenting suffering.
+        Against all reason, they got back up. Every. Single. Time.
+      </p>
+      <p class="could">In that time, they could have instead</p>
+      <div class="grid" id="cgrid"></div>
+      <div class="sigs">
+        <div class="sig">The Expeditioner</div>
+        <div class="seal">For<br>Those<br>After</div>
+        <div class="sig" id="cdate">Witness</div>
+      </div>
+    </div>
+    <div class="cert-actions">
+      <button class="win" onclick="print()">🖶 Print Certificate</button>
+      <button id="close">Back</button>
+    </div>
+  </div>
+</div>
+
+<script>
+const KEY = "simoun-death-counter";
+const $ = id => document.getElementById(id);
+const S = Object.assign(
+  { deaths: 0, elapsed: 0, runningSince: null, lastDeath: null, boss: "Simoun", player: "Bekhit" },
+  (() => { try { return JSON.parse(localStorage.getItem(KEY)) || {}; } catch { return {}; } })()
+);
+if (S.player === "Expeditioner") S.player = "Bekhit"; // old saved default
+const save = () => { try { localStorage.setItem(KEY, JSON.stringify(S)); } catch {} };
+
+const QUIPS = [
+  "The Expedition falters.", "Get up. Paint again.", "Simoun is unmoved.",
+  "Another stroke, erased.", "The canvas remembers.", "Parry. PARRY.",
+  "Petals fall. So does he.", "Tomorrow comes. Again.", "That one hurt to watch.",
+  "Dodge was right there.", "A noble death. Pointless, but noble.",
+  "The gommage would've been kinder.", "Bold strategy.", "History repeats. Loudly.",
+];
+
+const ms = () => S.elapsed + (S.runningSince ? Date.now() - S.runningSince : 0);
+const hms = t => { const s = Math.floor(t / 1000); return `${Math.floor(s / 3600)}:${String(Math.floor(s / 60) % 60).padStart(2, "0")}:${String(s % 60).padStart(2, "0")}`; };
+const roman = n => {
+  if (n < 1 || n > 3999) return "";
+  return [[1000,"M"],[900,"CM"],[500,"D"],[400,"CD"],[100,"C"],[90,"XC"],[50,"L"],[40,"XL"],[10,"X"],[9,"IX"],[5,"V"],[4,"IV"],[1,"I"]]
+    .reduce((out, [v, r]) => { while (n >= v) { out += r; n -= v; } return out; }, "");
+};
+
+function render() {
+  $("count").textContent = $("monolith").textContent = S.deaths;
+  $("roman").textContent = roman(S.deaths);
+  $("timer").textContent = S.runningSince ? "❚❚ Pause Timer" : "▶ Start Timer";
+  tick();
+}
+function tick() {
+  const t = ms();
+  $("time").textContent = hms(t);
+  $("dph").textContent = t > 60000 ? (S.deaths / (t / 3600000)).toFixed(1) : "–";
+  $("since").textContent = S.lastDeath ? hms(Date.now() - S.lastDeath) : "–";
+}
+setInterval(tick, 1000);
+
+function addDeath() {
+  S.deaths++; S.lastDeath = Date.now();
+  if (!S.runningSince) S.runningSince = Date.now(); // first death starts the clock if you forgot
+  save(); render();
+  const c = $("count"), f = $("flash");
+  c.classList.remove("hit"); f.classList.remove("on"); void c.offsetWidth;
+  c.classList.add("hit"); f.classList.add("on");
+  $("quip").textContent = QUIPS[Math.floor(Math.random() * QUIPS.length)];
+}
+function undo() { if (S.deaths > 0) { S.deaths--; save(); render(); } }
+function toggleTimer() {
+  if (S.runningSince) { S.elapsed += Date.now() - S.runningSince; S.runningSince = null; }
+  else S.runningSince = Date.now();
+  save(); render();
+}
+
+function showCert() {
+  if (S.runningSince) toggleTimer(); // stop the clock on victory
+  let hours = ms() / 3600000, est = false;
+  if (hours < 0.05) { hours = S.deaths * 4 / 60; est = true; } // ponytail: no timer → assume ~4 min per attempt
+  const fmt = (n, d = 0) => n.toLocaleString(undefined, { maximumFractionDigits: d, minimumFractionDigits: d });
+  const h = Math.floor(hours), m = Math.round((hours - h) * 60);
+  $("ctime").textContent = `${h} hour${h === 1 ? "" : "s"} ${m} minute${m === 1 ? "" : "s"}${est ? " (estimated)" : ""}`;
+  $("cdeaths").textContent = S.deaths.toLocaleString();
+  $("cboss").textContent = S.boss;
+  $("cname").textContent = S.player;
+  $("cdate").textContent = new Date().toLocaleDateString(undefined, { day: "numeric", month: "long", year: "numeric" });
+  // rates per hour
+  const items = [
+    [fmt(hours * 40), "pages of a good book read"],
+    [fmt(hours * 60), "lines of code written"],
+    [fmt(hours / 2.1, 1), "feature films watched"],
+    [fmt(hours * 60 / 3.5), "songs listened to"],
+    [fmt(hours * 5, 1), "kilometres walked"],
+    [fmt(hours * 3), "power naps taken"],
+  ];
+  $("cgrid").innerHTML = items.map(([n, l]) => `<div><b>${n}</b><span>${l}</span></div>`).join("");
+  $("overlay").classList.add("open");
+}
+
+$("add").onclick = addDeath;
+$("undo").onclick = undo;
+$("timer").onclick = toggleTimer;
+$("win").onclick = showCert;
+$("close").onclick = () => $("overlay").classList.remove("open");
+$("reset").onclick = () => {
+  if (!confirm("Erase all deaths and time? The canvas will be wiped clean.")) return;
+  Object.assign(S, { deaths: 0, elapsed: 0, runningSince: null, lastDeath: null });
+  $("quip").textContent = "A fresh canvas. For now.";
+  save(); render();
+};
+for (const [el, k] of [[$("boss"), "boss"], [$("cname"), "player"]]) {
+  el.addEventListener("input", () => { S[k] = el.textContent.trim() || (k === "boss" ? "Simoun" : "Bekhit"); save(); });
+  el.addEventListener("keydown", e => { if (e.key === "Enter") { e.preventDefault(); el.blur(); } });
+}
+
+document.addEventListener("keydown", e => {
+  if (e.target.isContentEditable || $("overlay").classList.contains("open")) return;
+  if (e.key === " " || e.key === "+" || e.key === "=") { e.preventDefault(); addDeath(); }
+  else if (e.key === "-" || e.key === "Backspace") { e.preventDefault(); undo(); }
+  else if (e.key.toLowerCase() === "t") toggleTimer();
+});
+
+// petals
+const PETAL_COLORS = ["#a3241f", "#c8443c", "#efe4cc", "#d8b36a", "#7d1712"];
+for (let i = 0; i < 26; i++) {
+  const p = document.createElement("div");
+  p.className = "petal";
+  const size = 8 + Math.random() * 10;
+  Object.assign(p.style, {
+    left: Math.random() * 100 + "vw", width: size + "px", height: size * .7 + "px",
+    background: PETAL_COLORS[i % PETAL_COLORS.length],
+    animationDuration: 10 + Math.random() * 14 + "s",
+    animationDelay: -Math.random() * 24 + "s",
+  });
+  p.style.setProperty("--drift", (Math.random() * 30 - 15) + "vw");
+  document.body.appendChild(p);
+}
+
+$("boss").textContent = S.boss;
+render();
+</script>
+</body>
+</html>
